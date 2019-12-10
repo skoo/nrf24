@@ -345,11 +345,12 @@ static ssize_t nrf24_write(struct file *filp,
 	data.pipe = p;
 	device = to_nrf24_device(p->dev->parent);
 
-	while (size > 0) {
-		data.size = p->cfg.plw != 0 ? p->cfg.plw : min_t(size_t, size, PLOAD_MAX);
+	if (size > 0) {
+		data.size = p->cfg.plw != 0 ? p->cfg.plw
+									: min_t(size_t, size, PLOAD_MAX);
 
 		memset(data.pload, 0, PLOAD_MAX);
-		if (copy_from_user(data.pload, buf + copied, data.size))
+		if (copy_from_user(data.pload, buf, min_t(size_t, data.size, size)))
 			goto exit_lock;
 
 		if (mutex_lock_interruptible(&device->tx_fifo_mutex))
@@ -361,15 +362,15 @@ static ssize_t nrf24_write(struct file *filp,
 		mutex_unlock(&device->tx_fifo_mutex);
 
 		if (filp->f_flags & O_NONBLOCK)
-			copied += data.size;
+			copied += size;
 		else {
 			wake_up_interruptible(&device->tx_wait_queue);
 
 			p->write_done = false;
 			wait_event_interruptible(p->write_wait_queue, p->write_done);
-			copied += p->sent;
+			//copied += p->sent;
+			copied += size;
 		}
-		size -= data.size;
 	}
 
 
@@ -630,11 +631,13 @@ static int nrf24_hal_init(struct nrf24_device *device)
 		return ret;
 
 	list_for_each_entry(pipe, &device->pipes, list) {
+#if 0
 		ret = nrf24_get_address(spi,
 					pipe->id,
 					(u8 *)&pipe->cfg.address);
 		if (ret < 0)
 			return ret;
+
 		ret = nrf24_get_auto_ack(spi, pipe->id);
 		if (ret < 0)
 			return ret;

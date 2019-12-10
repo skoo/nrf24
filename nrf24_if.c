@@ -645,6 +645,14 @@ static int nrf24_hal_init(struct nrf24_device *device)
 		ret = nrf24_set_rx_pload_width(spi, pipe->id, 0);
 		if (ret < 0)
 			return ret;
+#else
+		static const u8 default_addr[5] = { 0xba, 0x1a, 0xbe, 0x11, 0x00 };
+		memcpy((u8 *)&pipe->cfg.address, default_addr, sizeof(default_addr));
+		pipe->cfg.ack = 0;
+		nrf24_setup_auto_ack(spi, pipe->id, pipe->cfg.ack);
+		pipe->cfg.plw = 20;
+		nrf24_set_rx_pload_width(spi, pipe->id, pipe->cfg.plw);
+#endif
 	}
 
 	ret = nrf24_flush_fifo(spi);
@@ -664,35 +672,34 @@ static int nrf24_hal_init(struct nrf24_device *device)
 		return ret;
 
 	device->cfg.crc = NRF24_CRC_16BIT;
-	ret = nrf24_set_crc_mode(spi, NRF24_CRC_16BIT);
+	ret = nrf24_set_crc_mode(spi, device->cfg.crc);
 	if (ret < 0)
 		return ret;
 
-	device->cfg.retr_count = 15;
-	ret = nrf24_set_auto_retr_count(spi, 15);
+	device->cfg.retr_count = 0;
+	ret = nrf24_set_auto_retr_count(spi, device->cfg.retr_count);
 	if (ret < 0)
 		return ret;
 
 	device->cfg.retr_delay = 4000;
-	ret = nrf24_set_auto_retr_delay(spi, 4000);
+	ret = nrf24_set_auto_retr_delay(spi, device->cfg.retr_delay);
 	if (ret < 0)
 		return ret;
 
 	device->cfg.rf_power = NRF24_POWER_0DBM;
-	ret = nrf24_set_rf_power(spi, NRF24_POWER_0DBM);
+	ret = nrf24_set_rf_power(spi, device->cfg.rf_power);
 	if (ret < 0)
 		return ret;
 
 	device->cfg.data_rate = NRF24_DATARATE_2MBPS;
-	ret = nrf24_set_datarate(spi, NRF24_DATARATE_2MBPS);
+	ret = nrf24_set_datarate(spi, device->cfg.data_rate);
 	if (ret < 0)
 		return ret;
 
-	ret = nrf24_get_address_width(spi);
+	device->cfg.address_width = 5;
+	ret = nrf24_set_address_width(spi, 5);
 	if (ret < 0)
 		return ret;
-
-	device->cfg.address_width = ret;
 
 	ret = nrf24_power_up(spi);
 	if (ret < 0)

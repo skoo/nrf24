@@ -478,6 +478,48 @@ static ssize_t rf_power_store(struct device *dev,
 	return count;
 }
 
+static ssize_t rf_channel_show(struct device *dev,
+			     struct device_attribute *attr,
+			     char *buf)
+{
+	int ret;
+	struct nrf24_device *device = to_nrf24_device(dev);
+
+	ret = nrf24_get_rf_channel(device->spi);
+	if (ret < 0)
+		return ret;
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", ret);
+}
+
+static ssize_t rf_channel_store(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf,
+			      size_t count)
+{
+	int ret;
+	u8 new;
+	struct nrf24_device *device;
+
+	device = to_nrf24_device(dev);
+
+	ret = kstrtos8(buf, 10, &new);
+	if (ret < 0)
+		return ret;
+
+	ret = nrf24_get_rf_channel(device->spi);
+	if (ret < 0)
+		return ret;
+
+	if (new != ret) {
+		ret = nrf24_set_rf_channel(device->spi, new);
+		if (ret < 0)
+			return ret;
+		dev_dbg(dev, "%s: new rf channel = %d\n", __func__, new);
+	}
+	return count;
+}
+
 static ssize_t available_data_rate_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -680,6 +722,7 @@ static DEVICE_ATTR_RO(available_address_width);
 static DEVICE_ATTR_RW(address_width);
 static DEVICE_ATTR_RO(available_output_power);
 static DEVICE_ATTR_RW(rf_power);
+static DEVICE_ATTR_RW(rf_channel);
 static DEVICE_ATTR_RO(available_data_rate);
 static DEVICE_ATTR_RW(data_rate);
 static DEVICE_ATTR_RO(available_retr_delay);
@@ -695,6 +738,7 @@ struct attribute *nrf24_attrs[] = {
 	&dev_attr_address_width.attr,
 	&dev_attr_available_address_width.attr,
 	&dev_attr_rf_power.attr,
+	&dev_attr_rf_channel.attr,
 	&dev_attr_available_output_power.attr,
 	&dev_attr_data_rate.attr,
 	&dev_attr_available_data_rate.attr,

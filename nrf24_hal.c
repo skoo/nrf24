@@ -541,6 +541,11 @@ ssize_t nrf24_set_rf_channel(struct spi_device *spi, u8 channel)
 	return nrf24_write_reg(spi, RF_CH, channel);
 }
 
+ssize_t nrf24_get_rf_channel(struct spi_device *spi)
+{
+	return nrf24_read_reg(spi, RF_CH);
+}
+
 ssize_t nrf24_power_up(struct spi_device *spi)
 {
 	ssize_t config;
